@@ -1,0 +1,113 @@
+Zip Please
+==========
+
+A script to help you zip playlists.
+
+Copyright (C) 2101 Brandon W Maister quodlibetor@gmail.com
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+Installation
+============
+
+The usual::
+
+    python setup.py install
+
+or (recommended)::
+
+    pip install zipls
+
+or even (no snazzy auto-artist-detection features, though) just run
+`python zipls.py` without installing.
+
+installing from pypi via pip will pull in an audio tag library, which
+will make it much more likely that artist names will show up in the
+zip files.
+
+
+Usage
+=====
+
+Typically::
+
+    zipls PLAYLIST.pls
+
+that'll generate a zip file PLAYLIST.zip with a folder PLAYLIST inside
+of it with all the songs pointed to by PLAYLIST.pls.
+
+And of course::
+
+    zipls --help
+
+works. (Did you think I was a jerk?)
+
+API
+---
+
+::
+    from zipls import Songs
+
+    songs = Songs("path/to/playlist.m3u")
+
+    # __init__ just goes through add():
+    songs.add("path/to/another/playlist.xspf")
+    # lists of paths also work:
+    songs.add(['another.pls', 'something/else.m3u'])
+
+    songs.zip_em('path/to/zipcollection')
+
+Extending
+~~~~~~~~~
+
+First of all, just email me with an example of the playlist that you
+want zipls to parse and I'll do it. But if you want to *not*
+monkey-patch it:
+
+If you want to add a new playlist format with extension EXT: subclass
+`Songs` and implement a function `_songs_from_EXT(self,
+'path/to/pls')` that expects to receive a path to the playlist.
+
+Similarly, if you want to add audio format reading capabilities
+subclass `Song` (singular) and create a `_set_artist_from_EXT`, where
+EXT is the extension of the music format you want to add. You'll also
+need to initialize `Songs` with your new song class.
+
+So if I wanted to add `.spf` playlists and `.mus` audio::
+
+    class MusSong(zipls.Song):
+        def _set_artist_from_mus(self):
+            # and then probably:
+            from mutagen.mus import Mus
+            self.artist = Mus(self.path)['artist'][0]
+    class SpfSongs(zipls.Songs):
+        def _songs_from_spf(self, playlist):
+            # add songs
+
+    songs = SpfSongs('path/to/playlist', MusSong)
+
+
+Works With
+----------
+
+playlist formats:
+
+    - .pls
+    - .xspf
+    - .m3u
+
+A variety of common audio formats. (Ogg Vorbis, MP3/4, FLAC...)
+Anything supported by mutagen can be easily added, these are just what
+I needed for my playlists so far.
