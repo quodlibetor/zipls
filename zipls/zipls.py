@@ -37,7 +37,7 @@ except Exception:
 else:
     MUTAGEN = True
 
-VERSION = "0.1"
+VERSION = "0.1.1a"
 
 class Song(object):
     _warned_about_no_mutagen = False
@@ -275,7 +275,7 @@ def parse_args():
                 ->  1 - Song1.mp3
                 ->  2 - Song2.flac
                 ->  etc...
-p""")
+""")
     parser.add_argument('playlist', nargs='+',
                         help="\nthe playlist files to use to decide where to get the music from\n")
     parser.add_argument('-t', '--target', help="The file to write the music to.\n"
