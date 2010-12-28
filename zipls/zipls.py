@@ -33,7 +33,7 @@ try:
     from mutagen.mp4 import MP4
     from mutagen.oggvorbis import OggVorbis
     from mutagen.oggflac import OggFLAC
-except Exception:
+except ImportError:
     pass
 else:
     MUTAGEN = True
@@ -94,6 +94,8 @@ class Song(object):
                     "(install mutagen)"
                 Song._warned_about_no_mutagen = True
 
+    ################################################################
+    # Backend-specific artist setters
     def _set_artist_from_mp3(self):
         audio = EasyID3(self.path)
         self.artist = audio['artist'][0].strip()
@@ -144,23 +146,54 @@ class Songs(object):
         """
         self.Song = song_class
         self.songs = list()
-        if hasattr(playlists, "__iter__"):
-            for playlist in playlists:
-                self.add(playlist)
-        else:
-            self.add(playlists)
+        self.add(playlists)
 
-    def add(self, playlist):
-        """Add a playlist to the songlist
+    def add(self, addend):
+        """Add a addend to the songlist
+
+        These should all work:
+
+        >>> songs.add("another/playlist").add("yet/another")
+        >>> songs.add(Song("path/to/song.mp3"))
+        >>> songs.add([song1, song2, song3])
 
         Argument:
-        `playlist`: a path to a playlist file.
+        `addend`: some thing(s) to add to the songs.
+                  Can be a (list of) Song(s) or paths to playlists.
+                  Each element of a list should be the same kind of
+                  thing, though.
+
+        Returns:
+        `self`: for chaining! Although I don't know why you would.
         """
         def _getext(path):
             return path[path.rfind('.')+1:]
 
-        setter = getattr(self, "_songs_from_%s" % _getext(playlist))
-        setter(os.path.expanduser(playlist))
+        if hasattr(addend, "__iter__"):
+            try:
+                for playlist in addend:
+                    setter = getattr(self, "_songs_from_%s"
+                                     % _getext(playlist))
+                    setter(os.path.expanduser(playlist))
+            except AttributeError:
+                if isinstance(addend[0], Song):
+                    self.songs.extend(addend)
+                else:
+                    raise Exception("I don't know what to do with %s"
+                                    % repr(addend))
+        else:
+            try:
+                setter = getattr(self, "_songs_from_%s"
+                                 % _getext(addend))
+                setter(os.path.expanduser(addend))
+            except AttributeError:
+                if isinstance(addend, Song):
+                    self.songs.extend(addend)
+                else:
+                    raise Exception("I don't know what to do with %s"
+                                    % repr(addend))
+
+        return self
 
     def zip_em(self, target, inner_dir=None):
         """Create A ZipFile.
@@ -202,10 +235,19 @@ class Songs(object):
                                                        song,
                                                        song.ext)))
 
+    ################################################################
+    # Container Emulation
     def __iter__(self):
-        for song in self.songs:
-            yield song
+        return self.songs.__iter__()
 
+    def __getitem__(self, key):
+        return self.songs[key]
+
+    def __len__(self):
+        return len(self.songs)
+
+    ################################################################
+    # Playlist Parsers
     def _songs_from_pls(self, playlist):
         root = os.path.dirname(playlist)
         with open(playlist, 'r') as fh:
