@@ -18,7 +18,7 @@ or (recommended)::
     pip install zipls
 
 or even (no snazzy auto-artist-detection features, though) just run
-`python zipls.py` without installing.
+``python zipls.py`` without installing.
 
 installing from pypi via pip will pull in an audio tag library, which
 will make it much more likely that artist names will show up in the
@@ -47,7 +47,10 @@ works. (Did you think I was a jerk?)
 Programmers
 -----------
 
-::
+Basically all you care about is the ``Songs`` class from zipls. It
+takes a path, or list of paths, to a playlist and knows how to zip
+them::
+
     from zipls import Songs
 
     songs = Songs("path/to/playlist.m3u")
@@ -67,15 +70,15 @@ want zipls to parse and I'll do it. But if you want to *not*
 monkey-patch it:
 
 If you want to add a new playlist format with extension EXT: subclass
-`Songs` and implement a function `_songs_from_EXT(self,
-'path/to/pls')` that expects to receive a path to the playlist.
+``Songs`` and implement a function ``_songs_from_EXT(self,
+'path/to/pls')`` that expects to receive a path to the playlist.
 
 Similarly, if you want to add audio format reading capabilities
-subclass `Song` (singular) and create a `_set_artist_from_EXT`, where
+subclass ``Song`` (singular) and create a ``_set_artist_from_EXT``, where
 EXT is the extension of the music format you want to add. You'll also
-need to initialize `Songs` with your new song class.
+need to initialize ``Songs`` with your new song class.
 
-So if I wanted to add `.spf` playlists and `.mus` audio::
+So if I wanted to add ``.spf`` playlists and ``.mus`` audio::
 
     class MusSong(zipls.Song):
         def _set_artist_from_mus(self):
