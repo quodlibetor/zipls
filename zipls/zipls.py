@@ -32,6 +32,7 @@ try:
     from mutagen.flac import FLAC
     from mutagen.mp4 import MP4
     from mutagen.oggvorbis import OggVorbis
+    from mutagen.oggflac import OggFLAC
 except Exception:
     pass
 else:
@@ -102,6 +103,7 @@ class Song(object):
         self.artist = audio['artist'][0].strip()
 
     def _set_artist_from_m4a(self):
+        # mutagen.m4a is deprecated
         self._set_artist_from_mp4()
 
     def _set_artist_from_mp4(self):
@@ -113,12 +115,20 @@ class Song(object):
         try:
             self._set_artist_from_ogv()
         except:
-            print "couldn't get artist info for %s" % self.title
-            self.artist = None
+            # maybe flac?
+            try:
+                self._set_artist_from_ogf()
+            except:
+                print "couldn't get artist info for %s" % self.title
+                self.artist = None
 
     def _set_artist_from_ogv(self):
         audio = OggVorbis(self.path)
-        self.artist = audio['artist'][0]
+        self.artist = audio['artist'][0].strip()
+
+    def _set_artist_from_ogf(self):
+        audio = OggFLAC(self.path)
+        self.artist = audio['artist'][0].strip()
 
 class Songs(object):
     """The main playlist container.
