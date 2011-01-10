@@ -8,6 +8,8 @@
 #
 # bwm :: quodlibetor@gmail.com
 #
+# project home page: http://bitbucket.org/quodlibetor/zipls
+#
 # Oh and if it explodes it's not my fault.
 
 
@@ -40,6 +42,9 @@ else:
 
 VERSION = "0.1.1a"
 
+#######################################################################
+# Core Classes
+
 class Song(object):
     _warned_about_no_mutagen = False
     def __init__(self, path,
@@ -53,22 +58,18 @@ class Song(object):
         if not os.path.exists(path):
             raise OSError("Does not Exist")
         self.path = path
-        if title is not None:
-            self.title = title
-        else:
-            self._set_title()
-        if ext is None:
-            self._set_ext_from_path(path)
-        else:
-            self.ext = ext
-        self.artist = None
-        if artist is None:
-            self.set_artist_from_tag()
-        else:
-            self.artist = artist
 
-    def _set_ext_from_path(self, path):
-        self.ext = path[path.rfind('.')+1:]
+        self.title = title
+        if self.title is None:
+            self._set_title()
+
+        self.ext = ext
+        if self.ext is None:
+            self._set_ext_from_path(path)
+
+        self.artist = artist
+        if self.artist is None:
+            self.set_artist_from_tag()
 
     def __str__(self):
         name = ""
@@ -76,9 +77,22 @@ class Song(object):
             name += self.artist + " - "
         return name + self.title
 
+    def __eq__(self, other):
+        return self.path == other.path and \
+            self.title == other.title and \
+            self.artist == other.artist and \
+            self.ext == other.ext
+
+    def _set_ext_from_path(self, path):
+        self.ext = path[path.rfind('.')+1:]
+        if len(self.ext) == len(path):
+            # since rfind returns -1 on error
+            raise OSError("Couldn't set extension")
+
     def _set_title(self):
         # should really grab the title from audio info, but this is
-        # also only necessary for non-extended m3u, probably, so:
+        # also only necessary for non-extended m3u, probably, when
+        # called by Songs which does all the heavy-duty parsing, so:
         name, ext  = os.path.splitext(self.path)
         self.title = os.path.basename(name)
 
@@ -143,6 +157,7 @@ class Songs(object):
 
         Argument:
         `playlists`: a string (or list of strings) that are paths to playlist files.
+        `song_class`: a Song-compatible class to use instead of the built-in.
         """
         self.Song = song_class
         self.songs = list()
@@ -300,18 +315,22 @@ class Songs(object):
                     elif not line.startswith('#') and len(line) > 0:
                         path = os.path.join(root, line)
                         try:
-                            self.songs.append(self.Song(path, title,
+                            self.songs.append(self.Song(path=path, title=title,
                                                         artist=artist))
-                        except OSError:
-                            print "could not add %s" % path
+                        except OSError as e:
+                            print "could not add %s: %s" % (path, e)
                         artist = title = path = None
             else:
                 fh.seek(0)
                 for line in fh:
                     try:
                         self.songs.append(self.Song(line.strip()))
-                    except OSError:
-                        print "could not add %s" % path
+                    except OSError as e:
+                        print "could not add %s: %s" % (path, e)
+
+
+#######################################################################
+## Script Logic
 
 def parse_args():
     parser = argparse.ArgumentParser(description="write playlists to a zip file",
