@@ -50,7 +50,9 @@ class Song(object):
     def __init__(self, path,
                  title=None,
                  artist=None,
-                 ext=None):
+                 ext=None,
+                 track_number=None,
+                 album=None):
         """Needs at the very least a path to a file.
 
         Pretty dumb about setting the artist, too.
@@ -71,17 +73,77 @@ class Song(object):
         if self.artist is None:
             self.set_artist_from_tag()
 
+        self.track_number = track_number
+        if self.track_number is not None:
+            self.track_number = int(self.track_number)
+        self.album=album
+
     def __str__(self):
         name = ""
         if self.artist is not None:
             name += self.artist + " - "
         return name + self.title
 
+    def __format__(self, fmt):
+        """Return a string for the song.
+
+        Accepts any of the known song attributes in curly braces, and
+        puts the song in there.
+
+        Known tags include path, title, artist, ext, track_number, album
+
+        >>> song = Song(path="test/test-data/Sample.mp3",
+        ...             artist="Someone Special",
+        ...             track_number="1")
+        >>> format(song, "{track_number} - {artist}.{ext}")
+        '1 - Someone Special.mp3'
+
+        Full string.format stuff should work, too:
+
+        >>> format(song, "{track_number:04}")
+        '0002'
+        """
+        def _read_tag(fmt):
+            "return (tag, fmt)"
+            orig = fmt
+            string = ""
+            while True and fmt:
+                if fmt[0] == '}':
+                    fmt = fmt[1:]
+                    return string, fmt
+                elif fmt[0] == ":":
+                    while fmt[0] != '}':
+                        fmt = fmt[1:]
+                else:
+                    string += fmt[0]
+                    fmt = fmt[1:]
+            raise RuntimeError("Unclosed tag in format, originally: %s" %
+                               orig)
+
+        ################################################################
+        # format!
+        original = fmt
+        tags = list()
+        while fmt:
+            if fmt[0] == '{':
+                tag, fmt = _read_tag(fmt[1:])
+                tags.append(tag)
+            else:
+                fmt = fmt[1:]
+        try:
+            attrs = dict((tag, getattr(self, tag)) for tag in tags)
+        except AttributeError as e:
+            sys.exit("Can't format like you want because: %s" % e)
+
+        return original.format(**attrs)
+
     def __eq__(self, other):
         return self.path == other.path and \
             self.title == other.title and \
             self.artist == other.artist and \
-            self.ext == other.ext
+            self.ext == other.ext and \
+            self.album == other.album
+            # don't care about track numbers, though?
 
     def _set_ext_from_path(self, path):
         self.ext = path[path.rfind('.')+1:]
@@ -210,7 +272,8 @@ class Songs(object):
 
         return self
 
-    def zip_em(self, target, inner_dir=None):
+    def zip_em(self, target, inner_dir=None,
+               fmt="{track_number:02} - {artist} - {title}.{ext}"):
         """Create A ZipFile.
 
         Arguments:
@@ -230,13 +293,12 @@ class Songs(object):
                 print "zipping ", song
                 zf.write(song.path,
                          os.path.join(inner_dir,
-                                      ('%02d - %s.%s' % (i+1,
-                                                         song,
-                                                         song.ext))))
+                                      format(song, fmt)))
         finally:
             zf.close()
 
-    def copy_em(self, target):
+    def copy_em(self, target,
+                fmt="{track_number:02} - {artist} - {title}.{ext}"):
         target = os.path.expanduser(target)
         if not os.path.exists(target):
             os.makedirs(target)
@@ -246,9 +308,8 @@ class Songs(object):
         for i, song in enumerate(self.songs):
             shutil.copy(song.path,
                         os.path.join(target,
-                                     "%02d - %s.%s" % (i+1,
-                                                       song,
-                                                       song.ext)))
+                                     format(song,
+                                            fmt)))
 
     ################################################################
     # Container Emulation
@@ -275,7 +336,8 @@ class Songs(object):
                 elif '=' in line and line.startswith("Title"):
                     title = line.split('=')[1]
                     try:
-                        self.songs.append(self.Song(path, title))
+                        self.songs.append(self.Song(path, title,
+                                                    track_number=len(self)+1))
                     except OSError:
                         print "could not add %s" % path
 
@@ -293,7 +355,8 @@ class Songs(object):
             except:
                 artist = None
             try:
-                self.songs.append(self.Song(path, title, artist))
+                self.songs.append(self.Song(path, title, artist,
+                                            track_number=len(self)+1))
             except OSError:
                 print "could not add %s" % path
 
@@ -316,7 +379,8 @@ class Songs(object):
                         path = os.path.join(root, line)
                         try:
                             self.songs.append(self.Song(path=path, title=title,
-                                                        artist=artist))
+                                                        artist=artist,
+                                                        track_number=len(self)+1))
                         except OSError as e:
                             print "could not add %s: %s" % (path, e)
                         artist = title = path = None
@@ -324,7 +388,8 @@ class Songs(object):
                 fh.seek(0)
                 for line in fh:
                     try:
-                        self.songs.append(self.Song(line.strip()))
+                        self.songs.append(self.Song(line.strip()),
+                                          track_number=len(self)+1)
                     except OSError as e:
                         print "could not add %s: %s" % (path, e)
 
@@ -351,13 +416,27 @@ def parse_args():
                         help="\nthe playlist files to use to decide where to get the music from\n")
     parser.add_argument('-t', '--target', help="The file to write the music to.\n"
                         "(Defaults to the (first) playlist filename, with .zip instead of .pls)\n")
-    parser.add_argument('-f', '--folder-name',
+    parser.add_argument('-i', '--inner-folder-name',
                         help="An internal folder name to put the music files inside of.\n"
                         "(Defaults to the name of the archive, minus 'zip'.)\n")
     parser.add_argument('-c', '--copy', action='store_true', default=False,
                         help="\nCopy files into a directory instead of zipping them.\n"
                         "(Target is a destination folder to copy them in this case.\n"
                         "Creates the folder if it doesn't exist)")
+    # TODO: Implement this
+    # parser.add_argument('-r', '--rewrite-metadata',
+    #                     action='store_true', default=False,
+    #                     help="Change song metadata so that it will show up in media\n"
+    #                     "players in the correct order and with the album changed to\n"
+    #                     "the playlist name")
+    parser.add_argument('-f', '--format',
+                        action='store',
+                        default="{track_number:02} - {artist} - {title}.{ext}",
+                        help="An optional format string to customize the filename\n"
+                        "output by zipls. Enclose tags in curly braces wherever you\n"
+                        "want them to appear. See the README for more info and\n"
+                        "examples. Known tags:\n"
+                        "   {path}   {title}   {ext}   {track_number}   {album}")
 
     return parser.parse_args()
 
@@ -366,10 +445,14 @@ def main(args):
     if not args.target:
         target = os.path.splitext(os.path.basename(args.playlist[0]))[0]
         args.target = target
+
+    if not args.format.endswith(".{ext}"):
+        args.format += ".{ext}"
+
     if args.copy:
-        songs.copy_em(args.target)
+        songs.copy_em(args.target, args.format)
     else:
-        songs.zip_em(args.target, args.folder_name)
+        songs.zip_em(args.target, args.inner_folder_name, args.format)
 
 if __name__ == "__main__":
     try:
@@ -377,3 +460,5 @@ if __name__ == "__main__":
         main(args)
     except KeyboardInterrupt:
         print "\rCaught keyboard interrupt. Giving up without Cleaning up."
+    except RuntimeError as e:
+        print "Error! Error!: %s" % e
