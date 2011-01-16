@@ -52,7 +52,8 @@ class Song(object):
                  artist=None,
                  ext=None,
                  track_number=None,
-                 album=None):
+                 album=None,
+                 length=None):
         """Needs at the very least a path to a file.
 
         Pretty dumb about setting the artist, too.
@@ -76,7 +77,8 @@ class Song(object):
         self.track_number = track_number
         if self.track_number is not None:
             self.track_number = int(self.track_number)
-        self.album=album
+        self.album = album
+        self._length = length
 
     def __str__(self):
         name = ""
@@ -144,6 +146,11 @@ class Song(object):
             self.ext == other.ext and \
             self.album == other.album
             # don't care about track numbers, though?
+
+    @property
+    def length(self):
+        return (self._length if self._length is not None
+                else -1)
 
     def _set_ext_from_path(self, path):
         self.ext = path[path.rfind('.')+1:]
@@ -289,6 +296,10 @@ class Songs(object):
             inner_dir = os.path.basename(os.path.splitext(target)[0])
         try:
             zf = ZipFile(target, 'w')
+            zf.writestr("{0}.pls".format(inner_dir),
+                        self.to_pls(root=inner_dir,
+                                    fmt=fmt),
+                        )
             for i, song in enumerate(self.songs):
                 print "zipping ", song
                 zf.write(song.path,
@@ -393,6 +404,30 @@ class Songs(object):
                     except OSError as e:
                         print "could not add %s: %s" % (path, e)
 
+    ################################################################
+    # Playlist Writers
+    def to_pls(self,
+               root="",
+               fmt="{track_number:02} - {artist} - {title}.{ext}"):
+        buf = "[playlist]\n"
+        buf += "NumberOfEntries=%d\n\n" % len(self)
+
+        for i, song in enumerate(self):
+            try:
+                buf += "File{track_number}:{path}\n"\
+                       "Title{track_number}:{title}\n"\
+                       "Length{track_number}:{length}\n\n".format(
+                    track_number=i+1,
+                    path=os.path.join(root,
+                                      format(song, fmt)),
+                    title=song.title,
+                    length=song.length
+                    )
+            except KeyError as e:
+                print e
+                import pdb; pdb.set_trace()
+        buf = buf[:-1]
+        return buf
 
 #######################################################################
 ## Script Logic
