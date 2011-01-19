@@ -282,7 +282,7 @@ class Songs(object):
         def _getext(path):
             return path[path.rfind('.')+1:]
 
-        if hasattr(addend, "__iter__"):
+        if not isinstance(addend, str):
             try:
                 for playlist in addend:
                     setter = getattr(self, "_songs_from_%s"
