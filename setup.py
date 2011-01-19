@@ -2,8 +2,11 @@ from distutils.core import setup
 
 from zipls import zipls
 
-with open("README", 'r') as fh:
+fh = open("README", 'r')
+try:
     long_desc = fh.read()
+finally:
+    fh.close()
 
 setup(name="zipls",
       version=zipls.VERSION,
