@@ -84,7 +84,7 @@ class Song(object):
         name = ""
         if self.artist is not None:
             name += self.artist + " - "
-        return name + self.title
+        return name.replace('/', '_') + self.title.replace('/', '_')
 
     def __format__(self, fmt):
         """Return a string for the song.
@@ -100,21 +100,30 @@ class Song(object):
         >>> format(song, "{track_number} - {artist}.{ext}")
         '1 - Someone Special.mp3'
 
-        Full string.format stuff should work, too:
+        Full `string.format` stuff should work, too, with the addition
+        that an 's' anywhere in the format spec will mark a field as
+        'safe', meaning that '_'s won't be substituted for '/'s
 
         >>> format(song, "{track_number:04}")
-        '0002'
+        '0001'
+        >>> song.artist = "Someone/Special"
+        >>> format(song, "{artist}")
+        'Someone_Special'
+        >>> format(song, "{artist:s}")
+        'Someone/Special'
         """
         def _read_tag(fmt):
             "return (tag, fmt)"
             orig = fmt
+            spec = ""
             string = ""
             while True and fmt:
                 if fmt[0] == '}':
                     fmt = fmt[1:]
-                    return string, fmt
+                    return string, spec, fmt
                 elif fmt[0] == ":":
                     while fmt[0] != '}':
+                        spec += fmt[0]
                         fmt = fmt[1:]
                 else:
                     string += fmt[0]
@@ -126,14 +135,27 @@ class Song(object):
         # format!
         original = fmt
         tags = list()
+        specs = list()
         while fmt:
             if fmt[0] == '{':
-                tag, fmt = _read_tag(fmt[1:])
+                tag, spec, fmt = _read_tag(fmt[1:])
                 tags.append(tag)
+                specs.append(spec)
             else:
                 fmt = fmt[1:]
         try:
-            attrs = dict((tag, getattr(self, tag)) for tag in tags)
+            attrs = list()
+            for tag, spec in zip(tags, specs):
+                item = getattr(self, tag)
+                if not 's' in spec and not isinstance(item, int):
+                    try:
+                        item = item.replace('/', '_')
+                    except AttributeError:
+                        pass # don't care about non-strings
+                attrs.append((tag, item))
+
+            attrs = dict(attrs)
+
         except AttributeError as e:
             sys.exit("Can't format like you want because: %s" % e)
 
