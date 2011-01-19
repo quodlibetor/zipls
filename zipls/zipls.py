@@ -378,7 +378,7 @@ class Songs(object):
     # Playlist Parsers
     def _songs_from_pls(self, playlist):
         root = os.path.dirname(playlist)
-        with open(playlist, 'r') as fh:
+        with open(playlist, 'rU') as fh:
             path = ""
             title = ""
             for line in fh:
@@ -416,7 +416,7 @@ class Songs(object):
     def _songs_from_m3u(self, playlist):
         root = os.path.dirname(playlist)
         artist = title = path = time = None
-        with open(playlist, 'r') as fh:
+        with open(playlist, 'rU') as fh:
             start = fh.readline().strip()
             if start == '#EXTM3U':
                 for line in fh:
