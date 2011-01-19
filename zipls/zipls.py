@@ -149,7 +149,7 @@ class Song(object):
 
     @property
     def length(self):
-        return (self._length if self._length is not None
+        return (self._length if self._length
                 else -1)
 
     def _set_ext_from_path(self, path):
@@ -215,13 +215,17 @@ class Song(object):
         audio = OggFLAC(self.path)
         self.artist = audio['artist'][0].strip()
 
+class DoNotExport(Exception):
+    "Exception raised by Songs.to_none"
+
 class Songs(object):
     """The main playlist container.
 
     Holds a list of `Song`s, you can `add` playlists or `Song`s, and
     you can `copy_em` or `zip_em`.
     """
-    def __init__(self, playlists, song_class=Song):
+    def __init__(self, playlists,
+                 export_type=None, song_class=Song):
         """Construct a list of songs from playlists
 
         Argument:
@@ -231,6 +235,9 @@ class Songs(object):
         self.Song = song_class
         self.songs = list()
         self.add(playlists)
+        self.export_type = export_type
+        if export_type is None:
+            self.export_type = os.path.splitext(playlists[0])[1:]
 
     def add(self, addend):
         """Add a addend to the songlist
@@ -296,10 +303,15 @@ class Songs(object):
             inner_dir = os.path.basename(os.path.splitext(target)[0])
         try:
             zf = ZipFile(target, 'w')
-            zf.writestr("{0}.pls".format(inner_dir),
-                        self.to_pls(root=inner_dir,
-                                    fmt=fmt),
-                        )
+            export_func = getattr(self, "to_%s"%self.export_type)
+            try:
+                zf.writestr("{0}.{1}".format(inner_dir,
+                                             self.export_type) ,
+                            export_func(root=inner_dir,
+                                        fmt=fmt),
+                            )
+            except DoNotExport:
+                pass
             for i, song in enumerate(self.songs):
                 print "zipping ", song
                 zf.write(song.path,
@@ -316,6 +328,13 @@ class Songs(object):
         elif not os.path.isdir(target):
             sys.exit("Trying to copy files into non-directory. Quitting")
 
+        try:
+            with open(os.path.join(os.path.dirname(target),
+                                   "{0}.{1}".format(os.path.basename(target),
+                                                    self.export_type)), 'w') as fh:
+                fh.write(getattr(self, "to_%s" % self.export_type)())
+        except DoNotExport:
+            pass
         for i, song in enumerate(self.songs):
             shutil.copy(song.path,
                         os.path.join(target,
@@ -391,6 +410,7 @@ class Songs(object):
                         try:
                             self.songs.append(self.Song(path=path, title=title,
                                                         artist=artist,
+                                                        length=time,
                                                         track_number=len(self)+1))
                         except OSError as e:
                             print "could not add %s: %s" % (path, e)
@@ -406,6 +426,9 @@ class Songs(object):
 
     ################################################################
     # Playlist Writers
+    def to_none(self, *a, **kw):
+        raise DoNotExport()
+
     def to_pls(self,
                root="",
                fmt="{track_number:02} - {artist} - {title}.{ext}"):
@@ -428,6 +451,20 @@ class Songs(object):
                 import pdb; pdb.set_trace()
         buf = buf[:-1]
         return buf
+
+    def to_m3u(self,
+               root="",
+               fmt="{track_number:02} - {artist} - {title}.{ext}"):
+        buf = "#EXTM3U\n\n"
+
+        for song in self:
+            buf += "#EXTINF:{song.length}:{song.artist} - {song.title}\n"\
+                   "{path}\n\n".format(
+                song=song,
+                path=os.path.join(root,
+                                  format(song, fmt)),
+                )
+        return buf[:-1]
 
 #######################################################################
 ## Script Logic
@@ -472,11 +509,18 @@ def parse_args():
                         "want them to appear. See the README for more info and\n"
                         "examples. Known tags:\n"
                         "   {path}   {title}   {ext}   {track_number}   {album}")
+    parser.add_argument('-w', '--write-playlist-type', action="store",
+                        default=None,
+                        help="The playlist type to write inside of the zip file.\n"
+                        "Defaults to the type of the first playlist passed in.\n"
+                        "Options:\n   none   pls   m3u   \n" # xspf
+                        "If 'none' then no playlist will be written")
 
     return parser.parse_args()
 
 def main(args):
-    songs = Songs(args.playlist)
+    songs = Songs(args.playlist,
+                  export_type=args.write_playlist_type)
     if not args.target:
         target = os.path.splitext(os.path.basename(args.playlist[0]))[0]
         args.target = target
