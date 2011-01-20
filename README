@@ -21,7 +21,7 @@ or (recommended)::
 or even (no snazzy auto-artist-detection features, though) just run
 ``python zipls.py`` without installing.
 
-installing from pypi via pip will pull in an audio tag library, which
+installing from pypi via pip will pull in an `audio tag library`_, which
 will make it much more likely that artist names will show up in the
 zip files.
 
@@ -103,9 +103,7 @@ playlist formats:
     - .m3u
 
 A variety of common audio formats. (Ogg Vorbis, MP3/4, FLAC...)
-Anything supported by mutagen can be easily added, these are just what
-I needed for my playlists so far.
-
+Basically everything supported by mutagen_ should work
 
 Contact and Copying
 ===================
@@ -130,3 +128,6 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+.. _`audio tag library`:
+.. _mutagen: https://code.google.com/p/mutagen/

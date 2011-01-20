@@ -30,11 +30,7 @@ from HTMLParser import HTMLParser
 
 MUTAGEN = False
 try:
-    from mutagen.easyid3 import EasyID3
-    from mutagen.flac import FLAC
-    from mutagen.mp4 import MP4
-    from mutagen.oggvorbis import OggVorbis
-    from mutagen.oggflac import OggFLAC
+    import mutagen
 except ImportError:
     pass
 else:
@@ -72,7 +68,7 @@ class Song(object):
 
         self.artist = artist
         if self.artist is None:
-            self.set_artist_from_tag()
+            self._set_artist()
 
         self.track_number = track_number
         if self.track_number is not None:
@@ -181,61 +177,26 @@ class Song(object):
             raise OSError("Couldn't set extension")
 
     def _set_title(self):
-        # should really grab the title from audio info, but this is
-        # also only necessary for non-extended m3u, probably, when
-        # called by Songs which does all the heavy-duty parsing, so:
-        name, ext  = os.path.splitext(self.path)
-        self.title = os.path.basename(name)
+        try:
+            audio = mutagen.File(self.path, easy=True)
+            self.title = audio['title']
+        except KeyError:
+            name, ext  = os.path.splitext(self.path)
+            self.title = os.path.basename(name)
 
-    def set_artist_from_tag(self):
+    def _set_artist(self):
         if MUTAGEN:
             try:
-                getattr(self, "_set_artist_from_%s" % self.ext.lower())()
-            except AttributeError:
-                print "Could not get artist name for '%s'" % self.title
+                audio = mutagen.File(self.path, easy=True)
+                self.artist = audio['artist']
+            except KeyError:
+                print >>sys.stderr, "Could not get artist for {0}".format(self.path)
+                self.artist = ''
         else:
             if not Song._warned_about_no_mutagen:
                 print >>sys.stderr, "No ID3 tag library installed, so can't extract artist from mp3 tag.\n"\
                     "(install mutagen)"
                 Song._warned_about_no_mutagen = True
-
-    ################################################################
-    # Backend-specific artist setters
-    def _set_artist_from_mp3(self):
-        audio = EasyID3(self.path)
-        self.artist = audio['artist'][0].strip()
-
-    def _set_artist_from_flac(self):
-        audio= FLAC(self.path)
-        self.artist = audio['artist'][0].strip()
-
-    def _set_artist_from_m4a(self):
-        # mutagen.m4a is deprecated
-        self._set_artist_from_mp4()
-
-    def _set_artist_from_mp4(self):
-        audio = MP4(self.path)
-        self.artist = audio['\xa9ART'][0].strip()
-
-    def _set_artist_from_ogg(self):
-        # it's *probably* vorbis:
-        try:
-            self._set_artist_from_ogv()
-        except:
-            # maybe flac?
-            try:
-                self._set_artist_from_ogf()
-            except:
-                print "couldn't get artist info for %s" % self.title
-                self.artist = None
-
-    def _set_artist_from_ogv(self):
-        audio = OggVorbis(self.path)
-        self.artist = audio['artist'][0].strip()
-
-    def _set_artist_from_ogf(self):
-        audio = OggFLAC(self.path)
-        self.artist = audio['artist'][0].strip()
 
 class DoNotExport(Exception):
     "Exception raised by Songs.to_none"
