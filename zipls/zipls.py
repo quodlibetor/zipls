@@ -220,7 +220,9 @@ class Songs(object):
         self.add(playlists)
         self.export_type = export_type
         if export_type is None:
-            self.export_type = os.path.splitext(playlists[0])[1:]
+            self.export_type = os.path.splitext(playlists[0])[1][1:]
+            if self.export_type == 'xspf':
+                self.export_type = 'pls'
 
     def add(self, addend):
         """Add a addend to the songlist
@@ -453,7 +455,7 @@ class Songs(object):
 ## Script Logic
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="write playlists to a zip file",
+    parser = argparse.ArgumentParser(description="write playlists to a zip file.\n",
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      epilog="""Typically:
   All you need to do is: `zipls.py awesome.pls`.
@@ -466,8 +468,12 @@ def parse_args():
                 ->  1 - Song1.mp3
                 ->  2 - Song2.flac
                 ->  etc...
+
+The other option is running zipls with no arguments: that will place
+you in a minimal graphical interface that will let you select files
+and zip them.
 """)
-    parser.add_argument('playlist', nargs='+',
+    parser.add_argument('playlist', nargs='*',
                         help="\nthe playlist files to use to decide where to get the music from\n")
     parser.add_argument('-t', '--target', help="The file to write the music to.\n"
                         "(Defaults to the (first) playlist filename, with .zip instead of .pls)\n")
@@ -498,6 +504,10 @@ def parse_args():
                         "Defaults to the type of the first playlist passed in.\n"
                         "Options:\n   none   pls   m3u   \n" # xspf
                         "If 'none' then no playlist will be written")
+    parser.add_argument('-g', '--graphical', action='store_true',
+                        default=False,
+                        help="Force using the graphical interface, even if some\n"
+                        "arguments are provided.")
 
     return parser.parse_args()
 
@@ -519,8 +529,13 @@ def main(args):
 if __name__ == "__main__":
     try:
         args = parse_args()
-        main(args)
-    except KeyboardInterrupt:
+        print args.playlist
+        if len(sys.argv) > 1 and not args.graphical:
+            main(args)
+        else:
+            import gui
+            gui.main(args)
+    except (KeyboardInterrupt, EOFError):
         print "\rCaught keyboard interrupt. Giving up without Cleaning up."
     except RuntimeError as e:
         print "Error! Error!: %s" % e
