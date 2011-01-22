@@ -1,3 +1,4 @@
+==========
 Zip Please
 ==========
 
@@ -31,6 +32,23 @@ Usage
 
 Users
 -----
+
+Graphical Use
+~~~~~~~~~~~~~
+
+After installation there should be a program ``zipls`` that you can
+run. Run it.
+
+That is to say that, in general, if you run zipls without any
+arguments it will give you a gui.
+
+If you run it from a command line with playlist files as arguments,
+you can give it the ``-g`` switch to make it still run in graphical
+mode. All arguments other than ``-g`` and playlist file paths are
+ignored in graphics mode, though.
+
+Command Line
+~~~~~~~~~~~~
 
 Typically::
 

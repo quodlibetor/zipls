@@ -7,7 +7,7 @@ import zipls
 
 class Playlists(Tk.Frame):
     def __init__(self, master, playlists=None):
-        Tk.Frame.__init__(self, master)
+        Tk.Frame.__init__(self, master, padx=6)
         self.add_button = Tk.Button(self, text="Add another playlist",
                                     command=self.add)
         self.add_button.pack()
@@ -37,17 +37,22 @@ class PlaylistBox(Tk.Frame):
     playlists = list()
 
     def __init__(self, master):
-        Tk.Frame.__init__(self, master)
+        Tk.Frame.__init__(self, master, padx=5,
+                          bd=1, relief=Tk.SUNKEN)
         self.filepath = None
 
         self.label_text = Tk.StringVar()
-        self.label_text.set("Please choose a playlist file\n")
+        self.label_text.set("No playlist selected")
         self.label = Tk.Label(self, textvariable=self.label_text)
-        self.label.pack(side=Tk.RIGHT)
+        self.label.pack()
 
         self.button = Tk.Button(self, text="Choose a playlist file",
                                 command=self.get_file)
         self.button.pack(side=Tk.LEFT)
+
+        self.clear_button = Tk.Button(self, text="Clear!",
+                                      command=self.clear)
+        self.clear_button.pack(side=Tk.RIGHT)
 
         self.pack(fill=Tk.X)
 
@@ -58,6 +63,10 @@ class PlaylistBox(Tk.Frame):
         if filepath is not None:
             self.label_text.set(filepath)
             self.filepath = filepath
+
+    def clear(self):
+        self.label_text.set("No playlist selected")
+        self.filepath = None
 
 class Controls(Tk.Frame):
     def __init__(self, master):
