@@ -529,7 +529,6 @@ def main(args):
 if __name__ == "__main__":
     try:
         args = parse_args()
-        print args.playlist
         if len(sys.argv) > 1 and not args.graphical:
             main(args)
         else:
