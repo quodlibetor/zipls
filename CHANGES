@@ -1,0 +1,18 @@
+Version 0.2:
+
+    - Added a basic gui for graphical interaction
+
+    - Increase number of file formats that zipls works with
+
+    - Make zipfiles have a playlist inside of them by default
+
+    - Make artist/title strings safe by default. (Substitute '_' for
+      '/' in names)
+
+    - bug fixes
+
+Version 0.1:
+
+    - initial creation.
+
+    - Create zip files or copied directories of songs from a playlist.
