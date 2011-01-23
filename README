@@ -3,7 +3,8 @@ Zip Please
 ==========
 
 A script to help you zip playlists.
-http://bitbucket.org/quodlibetor/zipls
+
+Homepage: http://bitbucket.org/quodlibetor/zipls
 
 .. contents::
 
@@ -11,21 +12,16 @@ http://bitbucket.org/quodlibetor/zipls
 Installation
 ============
 
-The usual::
+To make this work best you want to have pip
+(http://pypi.python.org/pypi/pip) installed, although technically it
+is possible to install it without it.
 
-    python setup.py install
+From a terminal, (Terminal.app if you're on a Mac, or whatever turns
+you on) after installing pip, do::
 
-or (recommended)::
+    sudo pip install argparse mutagen zipls
 
-    pip install zipls
-
-or even (no snazzy auto-artist-detection features, though) just run
-``python zipls.py`` without installing.
-
-installing from pypi via pip will pull in an `audio tag library`_, which
-will make it much more likely that artist names will show up in the
-zip files.
-
+That should do it. If it doesn't, please contact_ me.
 
 Usage
 =====
@@ -44,8 +40,8 @@ arguments it will give you a gui.
 
 If you run it from a command line with playlist files as arguments,
 you can give it the ``-g`` switch to make it still run in graphical
-mode. All arguments other than ``-g`` and playlist file paths are
-ignored in graphics mode, though.
+mode. All arguments given to the command line should still apply even
+if run in graphics mode.
 
 Command Line
 ~~~~~~~~~~~~
@@ -123,6 +119,8 @@ playlist formats:
 A variety of common audio formats. (Ogg Vorbis, MP3/4, FLAC...)
 Basically everything supported by mutagen_ should work
 
+.. _contact:
+
 Contact and Copying
 ===================
 
@@ -147,5 +145,4 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-.. _`audio tag library`:
 .. _mutagen: https://code.google.com/p/mutagen/

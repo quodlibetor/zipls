@@ -469,9 +469,12 @@ def parse_args():
                 ->  2 - Song2.flac
                 ->  etc...
 
-The other option is running zipls with no arguments: that will place
-you in a minimal graphical interface that will let you select files
-and zip them.
+The other option is running zipls with no arguments or the
+``--graphical`` argument: that will place you in a minimal graphical
+interface that will let you select files and zip them.
+
+If you do run with the ``--graphical`` switch, all other arguments are
+still meaningful.
 """)
     parser.add_argument('playlist', nargs='*',
                         help="\nthe playlist files to use to decide where to get the music from\n")
