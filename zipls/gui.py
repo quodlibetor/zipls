@@ -21,11 +21,20 @@ class Playlists(Tk.Frame):
                 self.add(pls)
         self.pack()
 
+    def set_or_add(self, pls):
+        for ipls in PlaylistBox.playlists:
+            if ipls.filepath is None:
+                ipls.set(pls)
+                ipls.pack()
+                break
+        else:
+            self.add(pls)
+
     def add(self, pls=None):
         new_pls = PlaylistBox(self.playlist_frames)
+
         if pls is not None:
-            new_pls.filepath = pls
-            new_pls.label_text.set(pls)
+            new_pls.set(pls)
         new_pls.pack()
         self.playlist_frames.pack()
 
@@ -65,21 +74,23 @@ class PlaylistBox(Tk.Frame):
     def get_file(self):
         filepath = tkFileDialog.askopenfilename(filetypes=PlaylistBox.filetypes)
         if filepath:
-            self.label_text.set(filepath)
-            self.filepath = filepath
-
-            if PlaylistBox.playlists[0] is self and \
-                    TargetBox.single.target is None:
-                target = os.path.splitext(filepath)[0]
-                target += '.zip'
-                TargetBox.single.change_to(target)
-
+            self.set(filepath)
         elif self.filepath is not None:
             self.label_text.set(self.filepath)
         else:
             self.label_text.set(self.empty_text)
 
         self.label.pack()
+
+    def set(self, filepath):
+        self.label_text.set(filepath)
+        self.filepath = filepath
+
+        if PlaylistBox.playlists[0] is self and \
+                TargetBox.single.target is None:
+            target = os.path.splitext(filepath)[0]
+            target += '.zip'
+            TargetBox.single.change_to(target)
 
     def clear(self):
         self.label_text.set(self.empty_text)
@@ -131,11 +142,13 @@ class TargetBox(Tk.Frame):
         self.label.pack()
 
 class Controls(Tk.Frame):
-    def __init__(self, master, Control_Frames):
+    def __init__(self, master, args, Control_Frames):
         Tk.Frame.__init__(self, master)
 
         self.zip_button = Tk.Button(self, text="Zip!",
                                     command=self.zip)
+
+        self.args = args
 
         for Frame in Control_Frames:
             Frame(self)
@@ -152,8 +165,12 @@ class Controls(Tk.Frame):
         target = TargetBox.single.target
         if not target.endswith('.zip'):
             target = os.path.splitext(target)[0] + '.zip'
+
         songs = zipls.Songs(plss)
-        songs.zip_em(target)
+
+        self.args.playlist = plss
+        self.args.target = target
+        zipls.main(self.args)
 
         tkMessageBox.showinfo("Done!",
                               "Zipped:\n" +
@@ -170,11 +187,12 @@ def main(args):
                  pady=7)
     w.pack()
 
-    if args.playlist:
-        Playlists(root, args.playlist)
-    else:
-        Playlists(root)
-    Controls(root, [TargetBox])
+    playlists = Playlists(root)
+    Controls(root, args, [TargetBox])
+
+    if args.playlist is not None:
+        for pls in args.playlist:
+            playlists.set_or_add(pls)
 
     root.mainloop()
 
