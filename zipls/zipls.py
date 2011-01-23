@@ -36,7 +36,7 @@ except ImportError:
 else:
     MUTAGEN = True
 
-VERSION = "0.1.1a"
+VERSION = "0.2a"
 
 #######################################################################
 # Core Classes

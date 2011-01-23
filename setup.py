@@ -1,7 +1,5 @@
 from distutils.core import setup
 
-from zipls import zipls
-
 fh = open("README", 'r')
 try:
     long_desc = fh.read()
@@ -9,7 +7,7 @@ finally:
     fh.close()
 
 setup(name="zipls",
-      version=zipls.VERSION,
+      version="0.2a",
       description="A script to zip your playlists",
       long_description=long_desc,
       author="Brandon W Maister",
