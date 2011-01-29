@@ -7,7 +7,7 @@ finally:
     fh.close()
 
 setup(name="zipls",
-      version="0.2a",
+      version="0.2.1a",
       description="A script to zip your playlists",
       long_description=long_desc,
       author="Brandon W Maister",

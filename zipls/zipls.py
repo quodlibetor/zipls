@@ -36,7 +36,7 @@ except ImportError:
 else:
     MUTAGEN = True
 
-VERSION = "0.2a"
+VERSION = "0.2.1a"
 
 #######################################################################
 # Core Classes
@@ -152,7 +152,7 @@ class Song(object):
 
             attrs = dict(attrs)
 
-        except AttributeError as e:
+        except AttributeError, e:
             sys.exit("Can't format like you want because: %s" % e)
 
         return original.format(**attrs)
@@ -326,6 +326,10 @@ class Songs(object):
                                      format(song,
                                             fmt)))
 
+    def rename_em(self, target,
+                  fmt="{track_number:02} - {artist} - {title}.{ext}"):
+        pass
+
     ################################################################
     # Container Emulation
     def __iter__(self):
@@ -397,7 +401,7 @@ class Songs(object):
                                                         artist=artist,
                                                         length=time,
                                                         track_number=len(self)+1))
-                        except OSError as e:
+                        except OSError, e:
                             print "could not add %s: %s" % (path, e)
                         artist = title = path = None
             else:
@@ -406,7 +410,7 @@ class Songs(object):
                     try:
                         self.songs.append(self.Song(line.strip()),
                                           track_number=len(self)+1)
-                    except OSError as e:
+                    except OSError, e:
                         print "could not add %s: %s" % (path, e)
 
     ################################################################
@@ -431,7 +435,7 @@ class Songs(object):
                     title=song.title,
                     length=song.length
                     )
-            except KeyError as e:
+            except KeyError, e:
                 print e
                 import pdb; pdb.set_trace()
         buf = buf[:-1]
@@ -539,5 +543,5 @@ if __name__ == "__main__":
             gui.main(args)
     except (KeyboardInterrupt, EOFError):
         print "\rCaught keyboard interrupt. Giving up without Cleaning up."
-    except RuntimeError as e:
+    except RuntimeError, e:
         print "Error! Error!: %s" % e
