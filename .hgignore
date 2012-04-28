@@ -5,3 +5,4 @@ MANIFEST
 README.*
 dist*
 .coverage
+build*
