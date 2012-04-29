@@ -77,10 +77,12 @@ class Song(object):
         self._length = length
 
     def __str__(self):
+        def ftag(tag):
+            return ', '.join(tag)
         name = ""
         if self.artist is not None:
-            name += self.artist + " - "
-        return name.replace('/', '_') + self.title.replace('/', '_')
+            name += ftag(self.artist) + " - "
+        return name.replace('/', '_') + ftag(self.title).replace('/', '_')
 
     def __format__(self, fmt):
         """Return a string for the song.
@@ -205,7 +207,7 @@ class Songs(object):
     """The main playlist container.
 
     Holds a list of `Song`s, you can `add` playlists or `Song`s, and
-    you can `copy_em` or `zip_em`.
+    you can `copy_em`, `rename_em` or `zip_em`.
     """
     def __init__(self, playlists,
                  export_type=None, song_class=Song):
@@ -248,9 +250,12 @@ class Songs(object):
         if not isinstance(addend, str):
             try:
                 for playlist in addend:
-                    setter = getattr(self, "_songs_from_%s"
-                                     % _getext(playlist))
-                    setter(os.path.expanduser(playlist))
+                    if playlist.find('.') == -1:
+                        self.add_all_songs_below(playlist)
+                    else:
+                        setter = getattr(self, "_songs_from_%s"
+                                         % _getext(playlist))
+                        setter(os.path.expanduser(playlist))
             except AttributeError:
                 if isinstance(addend[0], Song):
                     self.songs.extend(addend)
@@ -258,18 +263,31 @@ class Songs(object):
                     raise Exception("I don't know what to do with %s"
                                     % repr(addend))
         else:
-            try:
-                setter = getattr(self, "_songs_from_%s"
-                                 % _getext(addend))
-                setter(os.path.expanduser(addend))
-            except AttributeError:
-                if isinstance(addend, Song):
-                    self.songs.extend(addend)
-                else:
-                    raise Exception("I don't know what to do with %s"
-                                    % repr(addend))
+            if addend.find('.') == -1:
+                # assume that it is a path to the root dir of what we're
+                # trying to fix up
+                self.add_all_songs_below(addend)
+            else:
+                try:
+                    setter = getattr(self, "_songs_from_%s"
+                                     % _getext(addend))
+                    setter(os.path.expanduser(addend))
+                except AttributeError:
+                    if isinstance(addend, Song):
+                        self.songs.extend(addend)
+                    else:
+                        raise Exception("I don't know what to do with %s"
+                                        % repr(addend))
 
         return self
+
+    def add_all_songs_below(self, root):
+        for path, dirnames, fnames in os.walk(root):
+            for fname in fnames:
+                name, ext = os.path.splitext(fname)
+                if ext in ('.mp3', '.ogg', '.ogf', '.ogv', '.m4a',
+                           '.flac'):
+                    self.songs.append(self.Song(os.path.join(path, fname)))
 
     def zip_em(self, target, inner_dir=None,
                fmt="{track_number:02} - {artist} - {title}.{ext}"):
@@ -326,9 +344,25 @@ class Songs(object):
                                      format(song,
                                             fmt)))
 
-    def rename_em(self, target,
+    def rename_em(self, target=None,
                   fmt="{track_number:02} - {artist} - {title}.{ext}"):
-        pass
+        """Rename song files based on metadata.
+
+        Arguments:
+            target -- the directory to move files to. The default is to
+                      rename files in place.
+        """
+        empty_target = False
+        for i, song in enumerate(self.songs):
+            if target is None:
+                target = os.path.dirname(song.path)
+                empty_target = True
+
+            shutil.move(song.path,
+                        os.path.join(target, format(song, fmt)))
+
+            if empty_target:
+                target = None
 
     ################################################################
     # Container Emulation
@@ -491,6 +525,11 @@ still meaningful.
                         help="\nCopy files into a directory instead of zipping them.\n"
                         "(Target is a destination folder to copy them in this case.\n"
                         "Creates the folder if it doesn't exist)")
+    parser.add_argument('--rename', action='store_true', default=False,
+                        help="Rename files instead of copying them.\n"
+                        "This is useful if you've got some files with bad filenames but good tags.\n"
+                        "This changes the meaning of the `target` argument to be the destination\n"
+                        "folder. If --target is nonexistent, rename files in place.")
     # TODO: Implement this
     # parser.add_argument('-r', '--rewrite-metadata',
     #                     action='store_true', default=False,
@@ -521,7 +560,10 @@ still meaningful.
 def main(args):
     songs = Songs(args.playlist,
                   export_type=args.write_playlist_type)
-    if not args.target:
+
+    print [str(s) for s in songs.songs] ; exit()
+
+    if not args.target and not args.rename:
         target = os.path.splitext(os.path.basename(args.playlist[0]))[0]
         args.target = target
 
@@ -530,6 +572,8 @@ def main(args):
 
     if args.copy:
         songs.copy_em(args.target, args.format)
+    elif args.rename:
+        songs.rename_em(args.target, args.format)
     else:
         songs.zip_em(args.target, args.inner_folder_name, args.format)
 
